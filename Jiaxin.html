@@ -44,7 +44,7 @@ function resize(){
 resize();
 
 // ── 日语字符库（平假名 & 片假名） ──
-const jpChars = 'あいうえおかきくけこさしすせそたちつてとなにぬねのはひふへほまみむめもやゆよらりるれろわをんアイウエオカキクケコサシスセソタチツテトナニヌネノハヒフヘホマミムメモヤユヨラリルレロワヲン';
+const jpChars = 'あいうえおかきくけこさしすせそたちつてとなにぬねのはひふへほまみむめもやゆよらりるれろわをんアイウエオカキクケコサシスセソタチツテトナニヌネノハヒフヘホマミ模ヤユヨラリルレロワヲン';
 const keyChars = '术力口'; // 核心情感文字
 
 // ── 粒子与字符类 ──
@@ -59,8 +59,8 @@ class TextParticle {
     this.alpha = 1;
     this.decay = Math.random() * 0.01 + 0.005;
     this.isExploded = false;
-    // 随机优雅的莫兰迪色调/淡彩色
-    this.color = `hsla(${Math.random() * 360}, 60%, 65%, `; 
+    // 【修复】只存储色调数值，避免未闭合字符串引起的渲染错误
+    this.hue = Math.random() * 360; 
   }
 
   update(shouldExplode) {
@@ -83,8 +83,11 @@ class TextParticle {
   }
 
   draw() {
-    if (this.alpha <= 0) return;
-    ctx.fillStyle = this.color + this.alpha + ')';
+    // 【修复】增加对非数字（NaN）的防御，防止透明度异常导致 Canvas 崩溃
+    if (this.alpha <= 0 || isNaN(this.alpha)) return;
+    
+    // 【修复】使用标准的 ES6 模板字符串，确保任何浏览器都能 100% 正确解析颜色
+    ctx.fillStyle = `hsla(${this.hue}, 60%, 65%, ${this.alpha})`;
     ctx.font = `bold ${this.fontSize}px sans-serif`;
     ctx.fillText(this.char, this.x, this.y);
   }
@@ -98,7 +101,7 @@ let isAudioStarted = false;
 document.addEventListener('click', () => {
   if (isAudioStarted) return;
 
-  audio.play().catch(e => console.log('播放失败：', e));
+  audio.play().catch(e => console.log('播放失败，请检查音乐文件路径：', e));
   hint.style.opacity = 0; // 隐藏提示
 
   audioCtx = new (window.AudioContext || window.webkitAudioContext)();
@@ -119,7 +122,6 @@ function draw() {
   ctx.fillRect(0, 0, canvas.width, canvas.height);
 
   let energy = 0; // 低音能量蓄力值
-  let totalVolume = 0;
 
   if (isAudioStarted && analyser) {
     analyser.getByteFrequencyData(dataArray);
@@ -133,19 +135,25 @@ function draw() {
   }
 
   // 1. 根据音乐低音能量，在底部生成字符
-  // 未播放音乐时有基础生成率，音乐越劲爆生成越多
   const spawnChance = isAudioStarted ? (energy / 255) * 0.6 + 0.1 : 0.1;
   if (Math.random() < spawnChance) {
     const x = Math.random() * canvas.width;
     const y = canvas.height + 20;
-    const char = jpChars[Math.floor(Math.random() * jpChars.length)];
+    
+    // 【优化】85% 的概率生成日文，15% 的概率生成核心文字“术力口”，让情感文字打破单调
+    let char;
+    if (Math.random() < 0.15) {
+      char = keyChars[Math.floor(Math.random() * keyChars.length)];
+    } else {
+      char = jpChars[Math.floor(Math.random() * jpChars.length)];
+    }
+    
     // 速度与音乐能量挂钩
     const speedFactor = isAudioStarted ? (energy / 255) * 1.5 + 0.8 : 1;
     particles.push(new TextParticle(x, y, char, speedFactor));
   }
 
   // 2. 判定当前时刻是否达到了“炸开”的阈值
-  // 当重低音能量超过 160（可根据音乐实际效果微调）时，空中未炸开的字符会随机炸裂
   const shouldExplode = energy > 165 && Math.random() > 0.4;
 
   // 3. 更新和绘制所有字符粒子
