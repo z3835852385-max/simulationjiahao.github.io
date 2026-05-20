@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>欣之所向</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:#fff;overflow:hidden;height:100vh;user-select: none;}
+canvas{display:block;width:100vw;height:100vh;}
+audio{display:none;}
+/* 提示点击的浮层 */
+#hint {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  font-family: 'Helvetica Neue', Arial, sans-serif;
+  font-size: 18px;
+  color: #666;
+  letter-spacing: 2px;
+  pointer-events: none;
+  transition: opacity 1s;
+}
+</style>
+</head>
+<body>
+<div id="hint">点击页面 唤醒嘉欣</div>
+<canvas id="visualizer"></canvas>
+<audio id="bgMusic" loop>
+  <source src="shulik.mp3" type="audio/mpeg">
+</audio>
+
+<script>
+const canvas = document.getElementById('visualizer');
+const ctx = canvas.getContext('2d');
+const audio = document.getElementById('bgMusic');
+const hint = document.getElementById('hint');
+
+function resize(){
+  canvas.width = window.innerWidth;
+  canvas.height = window.innerHeight;
+}
+resize();
+
+// ── 日语字符库（平假名 & 片假名） ──
+const jpChars = 'あいうえおかきくけこさしすせそたちつてとなにぬねのはひふへほまみむめもやゆよらりるれろわをんアイウエオカキクケコサシスセソタチツテトナニヌネノハヒフヘホマミムメモヤユヨラリルレロワヲン';
+
+// ── 粒子与字符类 ──
+class TextParticle {
+  constructor(x, y, char, speedFactor) {
+    this.x = x;
+    this.y = y;
+    this.char = char;
+    this.fontSize = Math.floor(Math.random() * 14) + 16; // 16px - 30px
+    this.vx = (Math.random() - 0.5) * 2;
+    this.vy = -(Math.random() * 3 + 2) * speedFactor; // 向上飘
+    this.alpha = 1;
+    this.decay = Math.random() * 0.01 + 0.005;
+    this.isExploded = false;
+    // 随机优雅的莫兰迪色调/淡彩色
+    this.color = `hsla(${Math.random() * 360}, 60%, 65%, `; 
+  }
+
+  update(shouldExplode) {
+    if (!this.isExploded && shouldExplode) {
+      // 触发炸开逻辑
+      this.isExploded = true;
+      this.vx = (Math.random() - 0.5) * (Math.random() * 12 + 4);
+      this.vy = (Math.random() - 0.5) * (Math.random() * 12 + 4);
+    }
+
+    this.x += this.vx;
+    this.y += this.vy;
+
+    if (this.isExploded) {
+      this.vy += 0.2; // 炸开后受重力下坠
+      this.alpha -= 0.02; // 炸开后消失得更快
+    } else {
+      this.alpha -= this.decay;
+    }
+  }
+
+  draw() {
+    if (this.alpha <= 0) return;
+    ctx.fillStyle = this.color + this.alpha + ')';
+    ctx.font = `bold ${this.fontSize}px sans-serif`;
+    ctx.fillText(this.char, this.x, this.y);
+  }
+}
+
+let particles = [];
+let audioCtx, analyser, dataArray;
+let isAudioStarted = false;
+
+// ── 点击激活音频 ──
+document.addEventListener('click', () => {
+  if (isAudioStarted) return;
+
+  audio.play().catch(e => console.log('播放失败：', e));
+  hint.style.opacity = 0; // 隐藏提示
+
+  audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+  analyser = audioCtx.createAnalyser();
+  const source = audioCtx.createMediaElementSource(audio);
+  source.connect(analyser);
+  analyser.connect(audioCtx.destination);
+
+  analyser.fftSize = 64; // 较小的fftSize让节奏捕捉更灵敏
+  dataArray = new Uint8Array(analyser.frequencyBinCount);
+  isAudioStarted = true;
+}, { once: true });
+
+// ── 主渲染循环 ──
+function draw() {
+  // 纯白背景：带有微弱拖尾效果
+  ctx.fillStyle = 'rgba(255, 255, 255, 0.2)';
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+  let energy = 0; // 低音能量蓄力值
+  let totalVolume = 0;
+
+  if (isAudioStarted && analyser) {
+    analyser.getByteFrequencyData(dataArray);
+
+    // 提取前4个频段的平均值作为低音节奏（鼓点）
+    let bassSum = 0;
+    for(let i = 0; i < 4; i++) {
+      bassSum += dataArray[i];
+    }
+    energy = bassSum / 4; 
+  }
+
+  // 1. 根据音乐低音能量，在底部生成字符
+  // 未播放音乐时有基础生成率，音乐越劲爆生成越多
+  const spawnChance = isAudioStarted ? (energy / 255) * 0.6 + 0.1 : 0.1;
+  if (Math.random() < spawnChance) {
+    const x = Math.random() * canvas.width;
+    const y = canvas.height + 20;
+    const char = jpChars[Math.floor(Math.random() * jpChars.length)];
+    // 速度与音乐能量挂钩
+    const speedFactor = isAudioStarted ? (energy / 255) * 1.5 + 0.8 : 1;
+    particles.push(new TextParticle(x, y, char, speedFactor));
+  }
+
+  // 2. 判定当前时刻是否达到了“炸开”的阈值
+  // 当重低音能量超过 160（可根据音乐实际效果微调）时，空中未炸开的字符会随机炸裂
+  const shouldExplode = energy > 165 && Math.random() > 0.4;
+
+  // 3. 更新和绘制所有字符粒子
+  for (let i = particles.length - 1; i >= 0; i--) {
+    const p = particles[i];
+
+    // 只让屏幕中上部分的字符炸开，底部刚升起的字符保留，形成层次感
+    const canExplodeHere = p.y < canvas.height * 0.85;
+
+    p.update(shouldExplode && canExplodeHere);
+    p.draw();
+
+    // 移除透明度归零或飞出屏幕的粒子
+    if (p.alpha <= 0 || p.x < -50 || p.x > canvas.width + 50 || p.y > canvas.height + 50) {
+      particles.splice(i, 1);
+    }
+  }
+
+  requestAnimationFrame(draw);
+}
+
+// 启动动画
+draw();
+
+// ── 屏幕自适应 ──
+window.addEventListener('resize', () => {
+  resize();
+  particles = [];
+});
+</script>
+</body>
+</html>

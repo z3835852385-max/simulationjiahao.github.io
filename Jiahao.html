@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>豪情在天</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{background:#000;overflow:hidden;height:100vh;}
+canvas{display:block;width:100vw;height:100vh;}
+audio{display:none;}
+</style>
+</head>
+<body>
+<canvas id="matrix"></canvas>
+<audio id="bgMusic" loop>
+  <source src="Iludeke.mp3" type="audio/mpeg">
+</audio>
+
+<script>
+const canvas = document.getElementById('matrix');
+const ctx = canvas.getContext('2d');
+const audio = document.getElementById('bgMusic');
+
+function resize(){
+  canvas.width = window.innerWidth;
+  canvas.height = window.innerHeight;
+}
+resize();
+
+// ── 数字雨 ──
+const fontSize = 16;
+let columns = Math.floor(canvas.width / fontSize);
+let drops = Array(columns).fill(1);
+
+// ── 股票滚动参数 ──
+const barW = 10;
+const barGap = 2;
+const barSlotW = barW + barGap;
+const barCenterY = () => canvas.height - 100;
+const maxBarH = 260;
+
+let barHistory = [];
+let frameCount = 0;
+const insertEvery = 3;
+
+// ── 音频 ──
+let audioCtx, analyser, dataArray;
+
+document.addEventListener('click', () => {
+  audio.play().catch(e => console.log('播放失败：', e));
+  if(!audioCtx){
+    audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    analyser = audioCtx.createAnalyser();
+    const source = audioCtx.createMediaElementSource(audio);
+    source.connect(analyser);
+    analyser.connect(audioCtx.destination);
+    analyser.fftSize = 128;
+    dataArray = new Uint8Array(analyser.frequencyBinCount);
+  }
+}, { once: true });
+
+// ── 主循环 ──
+function draw(){
+  // 数字雨背景
+  ctx.fillStyle = 'rgba(0,0,0,0.05)';
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+  ctx.fillStyle = '#0f0';
+  ctx.font = fontSize + 'px monospace';
+  for(let i = 0; i < columns; i++){
+    ctx.fillText(
+      Math.random() > 0.5 ? '1' : '0',
+      i * fontSize,
+      drops[i] * fontSize
+    );
+    if(drops[i] * fontSize > canvas.height && Math.random() > 0.97) drops[i] = 0;
+    drops[i]++;
+  }
+
+  // ── 股票滚动 ──
+  const centerY = barCenterY();
+  const maxSlots = Math.floor(canvas.width / barSlotW) + 2;
+
+  frameCount++;
+  if(frameCount % insertEvery === 0 && analyser){
+    analyser.getByteFrequencyData(dataArray);
+    const slice = Math.floor(dataArray.length / 4);
+    let sum = 0;
+    for(let i = 0; i < slice; i++) sum += dataArray[i];
+    const avg = sum / slice;
+
+    barHistory.push(avg);
+    if(barHistory.length > maxSlots) barHistory.shift();
+  }
+
+  // 动态基准线：高于均值→红柱向上，低于均值→绿柱向下
+  const avgVal = barHistory.length
+    ? barHistory.reduce((a, b) => a + b, 0) / barHistory.length
+    : 128;
+
+  const startX = canvas.width - barSlotW;
+
+  for(let i = 0; i < barHistory.length; i++){
+    const val = barHistory[barHistory.length - 1 - i];
+    const x = startX - i * barSlotW;
+    if(x + barW < 0) break;
+
+    const diff = val - avgVal;
+    const barH = Math.abs(diff) / (avgVal || 1) * maxBarH * 0.8 + 4;
+
+    if(diff >= 0){
+      // 高于均值 → 红柱向上
+      ctx.fillStyle = '#ff3333';
+      ctx.fillRect(x, centerY - barH, barW, barH);
+      ctx.fillStyle = '#ff6666';
+      ctx.fillRect(x + barW/2 - 1, centerY - barH - 5, 2, 5);
+    } else {
+      // 低于均值 → 绿柱向下
+      ctx.fillStyle = '#00dd66';
+      ctx.fillRect(x, centerY, barW, barH);
+      ctx.fillStyle = '#66ffaa';
+      ctx.fillRect(x + barW/2 - 1, centerY + barH, 2, 5);
+    }
+  }
+
+  // 基准线
+  ctx.strokeStyle = 'rgba(180,180,180,0.4)';
+  ctx.lineWidth = 1;
+  ctx.setLineDash([4, 6]);
+  ctx.beginPath();
+  ctx.moveTo(0, centerY);
+  ctx.lineTo(canvas.width, centerY);
+  ctx.stroke();
+  ctx.setLineDash([]);
+
+  requestAnimationFrame(draw);
+}
+draw();
+
+window.addEventListener('resize', () => {
+  resize();
+  columns = Math.floor(canvas.width / fontSize);
+  drops = Array(columns).fill(1);
+  barHistory = [];
+});
+</script>
+</body>
+</html>
