@@ -1,0 +1,584 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>明察秋豪，不见舆欣</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Ma+Shan+Zheng&family=ZCOOL+XiaoWei&family=Rajdhani:wght@700;900&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --left-primary: #ff79b0;
+            --left-accent: #a1c4fd;
+            --left-deep: #1e3c72;
+            --right-primary: #ff007f;
+            --right-accent: #00f0ff;
+            --right-bg: #03020a;
+            --divider-w: 6px;
+            --skew: 12deg;
+        }
+
+        *, *::before, *::after {
+            margin: 0; padding: 0;
+            box-sizing: border-box;
+        }
+
+        html, body {
+            width: 100%; height: 100%;
+            overflow: hidden;
+            background: #000;
+            cursor: none;
+        }
+
+        /* ── 自定义光标 ── */
+        .cursor {
+            position: fixed;
+            width: 16px; height: 16px;
+            border-radius: 50%;
+            background: rgba(255,255,255,0.9);
+            mix-blend-mode: difference;
+            pointer-events: none;
+            z-index: 9999;
+            transform: translate(-50%, -50%);
+            transition: transform 0.08s ease, width 0.2s ease, height 0.2s ease;
+        }
+        .cursor-ring {
+            position: fixed;
+            width: 44px; height: 44px;
+            border-radius: 50%;
+            border: 1.5px solid rgba(255,255,255,0.5);
+            pointer-events: none;
+            z-index: 9998;
+            transform: translate(-50%, -50%);
+            transition: transform 0.18s ease, width 0.3s ease, height 0.3s ease, border-color 0.3s ease;
+        }
+        /* ── 开场遮罩 ── */
+        .intro-veil {
+            position: fixed; inset: 0; z-index: 1000;
+            background: #000;
+            display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 20px;
+            animation: veilExit 0.8s cubic-bezier(0.76, 0, 0.24, 1) 2.5s forwards; /* 稍微延长了退场时间以便阅读字条 */
+        }
+        .intro-title {
+            font-family: 'Ma Shan Zheng', cursive;
+            font-size: clamp(28px, 5vw, 56px);
+            color: #fff;
+            letter-spacing: 0.3em;
+            opacity: 0;
+            animation: titleFade 2.0s ease 0.3s forwards;
+        }
+        /* 免费提示小字样式 */
+        .intro-notice {
+            font-family: "Microsoft YaHei", sans-serif;
+            font-size: clamp(12px, 1.2vw, 16px);
+            color: rgba(255, 255, 255, 0.6);
+            max-width: 80%;
+            text-align: center;
+            line-height: 1.6;
+            letter-spacing: 1px;
+            opacity: 0;
+            animation: titleFade 2.0s ease 0.3s forwards;
+        }
+        @keyframes titleFade {
+            0%   { opacity: 0; transform: translateY(12px); }
+            30%  { opacity: 1; transform: translateY(0); }
+            80%  { opacity: 1; transform: translateY(0); }
+            100% { opacity: 0; transform: translateY(-8px); }
+        }
+        @keyframes veilExit {
+            to { opacity: 0; pointer-events: none; }
+        }
+
+        /* ── 主容器 ── */
+        .container {
+            display: flex;
+            width: 100%; height: 100%;
+            position: relative;
+        }
+
+        /* ── 分隔发光线 ── */
+        .divider {
+            position: absolute;
+            top: 0; bottom: 0;
+            left: 50%;
+            width: var(--divider-w);
+            z-index: 10;
+            background: linear-gradient(180deg,
+                transparent 0%,
+                rgba(255,255,255,0.1) 15%,
+                rgba(255,255,255,0.85) 50%,
+                rgba(255,255,255,0.1) 85%,
+                transparent 100%);
+            transform: translateX(-50%) skewX(calc(-1 * var(--skew)));
+            filter: blur(1px);
+            animation: dividerPulse 4s ease-in-out infinite;
+        }
+        @keyframes dividerPulse {
+            0%,100% { opacity: 0.6; filter: blur(1px); }
+            50%     { opacity: 1; filter: blur(0px) drop-shadow(0 0 8px #fff); }
+        }
+
+        /* ── 通用半区 ── */
+        .half {
+            flex: 1; height: 100%;
+            display: flex; justify-content: center; align-items: center;
+            position: relative; overflow: hidden;
+            text-decoration: none;
+            transition: flex 0.7s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+        .half:hover { flex: 1.15; }
+
+        /* ══════════════ 左侧：流光琉璃 ══════════════ */
+        .left-side {
+            background:
+                radial-gradient(ellipse at 30% 60%, rgba(255,180,220,0.6) 0%, transparent 55%),
+                radial-gradient(ellipse at 75% 20%, rgba(161,196,253,0.7) 0%, transparent 50%),
+                linear-gradient(140deg, #FF66A3 0%, #c3aef0 45%, #1e3c72 100%);
+            background-size: 400% 400%, 400% 400%, 100% 100%;
+            animation: liquidShift 10s ease-in-out infinite;
+        }
+        @keyframes liquidShift {
+            0%,100% { background-position: 0% 50%, 100% 0%, center; }
+            33%     { background-position: 60% 10%, 40% 80%, center; }
+            66%     { background-position: 100% 90%, 0% 40%, center; }
+        }
+
+        /* 流星粒子层 */
+        .left-side .particles { position: absolute; inset: 0; overflow: hidden; }
+        .particle {
+            position: absolute;
+            border-radius: 50%;
+            background: rgba(255,255,255,0.7);
+            animation: floatUp linear infinite;
+            filter: blur(0.5px);
+        }
+
+        @keyframes floatUp {
+            0%   { transform: translateY(110%) scale(1); opacity: 0; }
+            10%  { opacity: 0.8; }
+            90%  { opacity: 0.3; }
+            100% { transform: translateY(-20%) scale(0.4); opacity: 0; }
+        }
+
+        /* 光晕叠层 */
+        .left-side::after {
+            content: '';
+            position: absolute; inset: 0;
+            background: radial-gradient(circle at 50% 50%, rgba(255,255,255,0.15) 0%, transparent 70%);
+            animation: haloBreath 6s ease-in-out infinite;
+            pointer-events: none;
+        }
+        @keyframes haloBreath {
+            0%,100% { opacity: 0.5; transform: scale(1); }
+            50%     { opacity: 1; transform: scale(1.08); }
+        }
+
+        .left-side .content-wrapper {
+            position: relative; z-index: 5;
+            display: flex; flex-direction: column; align-items: center; gap: 20px;
+        }
+
+        /* 左侧标题 */
+        .left-title {
+            font-family: 'ZCOOL XiaoWei', serif;
+            font-size: clamp(13px, 1.5vw, 18px);
+            color: rgba(255,255,255,0.75);
+            letter-spacing: 0.4em;
+            text-shadow: 0 2px 12px rgba(0,0,0,0.2);
+            transform: translateY(8px);
+            opacity: 0;
+            animation: slideUp 0.6s ease 3.1s forwards;
+        }
+
+        /* 左侧按钮 */
+        .apple-btn-cool {
+            padding: 22px 68px;
+            font-family: 'ZCOOL XiaoWei', serif;
+            font-size: clamp(20px, 2.5vw, 28px);
+            font-weight: 700;
+            color: #fff;
+            background: rgba(255,255,255,0.12);
+            backdrop-filter: blur(30px) saturate(180%);
+            -webkit-backdrop-filter: blur(30px) saturate(180%);
+            border: 1.5px solid rgba(255,255,255,0.55);
+            border-radius: 80px;
+            cursor: none;
+            letter-spacing: 6px;
+            text-shadow: 0 0 20px rgba(255,255,255,0.6);
+            transition: all 0.45s cubic-bezier(0.16, 1, 0.3, 1);
+            box-shadow:
+                0 0 30px rgba(161,196,253,0.3),
+                inset 0 1px 0 rgba(255,255,255,0.4),
+                inset 0 -1px 0 rgba(255,255,255,0.1);
+            position: relative;
+            overflow: hidden;
+            transform: translateY(8px);
+            opacity: 0;
+            animation: slideUp 0.6s ease 3.3s forwards;
+        }
+        .apple-btn-cool::before {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background: linear-gradient(120deg, transparent 0%, rgba(255,255,255,0.18) 50%, transparent 100%);
+            transform: translateX(-100%);
+            transition: transform 0.6s ease;
+        }
+        .left-side:hover .apple-btn-cool {
+            background: rgba(255,255,255,0.28);
+            transform: translateY(-6px) scale(1.04);
+            box-shadow:
+                0 20px 50px rgba(161,196,253,0.6),
+                0 0 0 1px rgba(255,255,255,0.4),
+                inset 0 1px 0 rgba(255,255,255,0.6);
+            letter-spacing: 8px;
+        }
+        .left-side:hover .apple-btn-cool::before { transform: translateX(100%); }
+
+        /* 左侧下方装饰 */
+        .left-deco {
+            display: flex; gap: 10px; align-items: center;
+            opacity: 0; transform: translateY(8px);
+            animation: slideUp 0.6s ease 3.5s forwards;
+        }
+        .deco-dot {
+            width: 6px; height: 6px; border-radius: 50%;
+            background: rgba(255,255,255,0.5);
+            animation: dotBlink 2s ease-in-out infinite;
+        }
+        .deco-dot:nth-child(2) { animation-delay: 0.3s; }
+        .deco-dot:nth-child(3) { animation-delay: 0.6s; }
+        @keyframes dotBlink {
+            0%,100% { opacity: 0.4; transform: scale(1); }
+            50%     { opacity: 1; transform: scale(1.4); }
+        }
+
+        /* ══════════════ 右侧：赛博朋克 ══════════════ */
+        .right-side {
+            background: var(--right-bg);
+            background-image:
+                linear-gradient(rgba(0,240,255,0.04) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(255,0,127,0.04) 1px, transparent 1px);
+            background-size: 30px 30px;
+        }
+
+        /* 扫描线 */
+        .right-side::before {
+            content: '';
+            position: absolute; inset: 0;
+            background: repeating-linear-gradient(
+                0deg,
+                transparent,
+                transparent 2px,
+                rgba(0,240,255,0.015) 2px,
+                rgba(0,240,255,0.015) 4px
+            );
+            animation: scanMove 8s linear infinite;
+            pointer-events: none;
+        }
+        @keyframes scanMove {
+            0% { background-position: 0 0; }
+            100% { background-position: 0 100px; }
+        }
+
+        /* RGB 流光边框 */
+        .right-side::after {
+            content: '';
+            position: absolute; inset: 0;
+            background: linear-gradient(180deg,
+                var(--right-accent), var(--right-primary),
+                var(--right-accent), var(--right-primary));
+            background-size: 100% 400%;
+            animation: rgbFlow 3s linear infinite;
+            mask: linear-gradient(90deg, black 0%, black 4px, transparent 4px);
+            -webkit-mask: linear-gradient(90deg, black 0%, black 4px, transparent 4px);
+            opacity: 0.7;
+            pointer-events: none;
+        }
+        @keyframes rgbFlow {
+            0% { background-position: 0 0%; }
+            100% { background-position: 0 400%; }
+        }
+
+        .right-side .content-wrapper {
+            position: relative; z-index: 5;
+            display: flex; flex-direction: column; align-items: center; gap: 20px;
+        }
+
+        /* 右侧标题 */
+        .right-title {
+            font-family: 'Rajdhani', sans-serif;
+            font-size: clamp(11px, 1.2vw, 15px);
+            color: rgba(0,240,255,0.6);
+            letter-spacing: 0.6em;
+            text-transform: uppercase;
+            transform: translateY(8px);
+            opacity: 0;
+            animation: slideUp 0.6s ease 3.1s forwards;
+        }
+
+        /* 右侧按钮 */
+        .cyber-btn-extreme {
+            padding: 20px 60px;
+            font-family: 'Rajdhani', sans-serif;
+            font-size: clamp(18px, 2.2vw, 26px);
+            font-weight: 900;
+            color: #fff;
+            background: transparent;
+            border: 2px solid var(--right-primary);
+            border-radius: 0;
+            cursor: none;
+            letter-spacing: 8px;
+            text-transform: uppercase;
+            text-shadow: 0 0 12px var(--right-primary);
+            box-shadow:
+                0 0 20px rgba(255,0,127,0.4),
+                inset 0 0 20px rgba(255,0,127,0.08);
+            transition: all 0.25s ease;
+            position: relative; overflow: hidden;
+            clip-path: polygon(12px 0%, 100% 0%, calc(100% - 12px) 100%, 0% 100%);
+            transform: translateY(8px);
+            opacity: 0;
+            animation: slideUp 0.6s ease 3.3s forwards;
+        }
+
+        /* 按钮内部扫光 */
+        .cyber-btn-extreme::before {
+            content: '';
+            position: absolute; inset: 0;
+            background: linear-gradient(90deg,
+                transparent 0%, rgba(255,0,127,0.2) 50%, transparent 100%);
+            transform: translateX(-100%);
+            animation: cyberSweep 2.5s ease-in-out infinite;
+        }
+        @keyframes cyberSweep {
+            0%  { transform: translateX(-100%); }
+            60% { transform: translateX(100%); }
+            100%{ transform: translateX(100%); }
+        }
+
+        .right-side:hover .cyber-btn-extreme {
+            color: var(--right-accent);
+            border-color: var(--right-accent);
+            text-shadow: 0 0 20px var(--right-accent), 0 0 40px var(--right-accent);
+            box-shadow:
+                0 0 50px rgba(0,240,255,0.6),
+                inset 0 0 30px rgba(0,240,255,0.12);
+            transform: translateY(-4px) scale(1.04);
+            letter-spacing: 10px;
+            clip-path: polygon(8px 0%, 100% 0%, calc(100% - 8px) 100%, 0% 100%);
+        }
+
+        /* 故障字效 */
+        .glitch-text {
+            position: relative;
+            display: inline-block;
+        }
+        .glitch-text::before,
+        .glitch-text::after {
+            content: attr(data-text);
+            position: absolute; inset: 0;
+            display: flex; align-items: center; justify-content: center;
+            opacity: 0;
+        }
+        .right-side:hover .glitch-text::before {
+            color: var(--right-accent);
+            clip-path: polygon(0 30%, 100% 30%, 100% 55%, 0 55%);
+            animation: glitchA 0.5s steps(2) infinite;
+            opacity: 1;
+        }
+        .right-side:hover .glitch-text::after {
+            color: var(--right-primary);
+            clip-path: polygon(0 60%, 100% 60%, 100% 80%, 0 80%);
+            animation: glitchB 0.7s steps(2) infinite;
+            opacity: 1;
+        }
+        @keyframes glitchA {
+            0%   { transform: translate(3px, 0); }
+            50%  { transform: translate(-3px, 1px); }
+            100% { transform: translate(2px, -1px); }
+        }
+        @keyframes glitchB {
+            0%   { transform: translate(-2px, 0); }
+            50%  { transform: translate(2px, -1px); }
+            100% { transform: translate(-1px, 1px); }
+        }
+
+        /* 右侧角落装饰 */
+        .corner-deco {
+            position: absolute;
+            width: 50px; height: 50px;
+            opacity: 0.4;
+        }
+        .corner-deco.tl { top: 20px; left: 20px;
+            border-top: 2px solid var(--right-accent); border-left: 2px solid var(--right-accent); }
+        .corner-deco.br { bottom: 20px; right: 20px;
+            border-bottom: 2px solid var(--right-primary); border-right: 2px solid var(--right-primary); }
+
+        /* 右侧进度条装饰 */
+        .cyber-bar {
+            width: 160px; height: 2px;
+            background: rgba(255,0,127,0.2);
+            position: relative; overflow: hidden;
+            opacity: 0; transform: translateY(8px);
+            animation: slideUp 0.6s ease 3.5s forwards;
+        }
+        .cyber-bar::after {
+            content: '';
+            position: absolute; inset: 0;
+            background: linear-gradient(90deg, var(--right-primary), var(--right-accent));
+            animation: barScan 2s ease-in-out infinite;
+        }
+        @keyframes barScan {
+            0%   { transform: translateX(-100%); }
+            50%  { transform: translateX(0%); }
+            100% { transform: translateX(100%); }
+        }
+
+        /* ── 通用动画 ── */
+        @keyframes slideUp {
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* ── 中心装饰文字 ── */
+        .center-text {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            z-index: 20;
+            font-family: 'Ma Shan Zheng', cursive;
+            font-size: clamp(11px, 1.2vw, 15px);
+            color: rgba(255,255,255,0.9);
+            letter-spacing: 3px;
+            writing-mode: vertical-rl;
+            text-orientation: upright;
+            text-shadow: 0 0 20px rgba(255,255,255,0.8);
+            animation: centerFadeIn 0.5s ease 3.5s both;
+            pointer-events: none;
+        }
+        @keyframes centerFadeIn {
+            from { opacity: 0; }
+            to   { opacity: 1; }
+        }
+
+        /* ── 响应式 ── */
+        @media (max-width: 768px) {
+            html, body { cursor: auto; }
+            .cursor, .cursor-ring { display: none; }
+            .container { flex-direction: column; }
+            .half { flex: 1; transition: flex 0.5s ease; }
+            .half:hover { flex: 1.2; }
+            .divider {
+                top: 50%; left: 0; right: 0; bottom: auto;
+                width: 100%; height: var(--divider-w);
+                transform: translateY(-50%) skewY(0deg);
+            }
+            .right-side::after {
+                mask: linear-gradient(180deg, black 0%, black 4px, transparent 4px);
+                -webkit-mask: linear-gradient(180deg, black 0%, black 4px, transparent 4px);
+            }
+            .corner-deco { display: none; }
+            .center-text { display: none; }
+            .apple-btn-cool, .cyber-btn-extreme { font-size: 20px; padding: 16px 48px; }
+        }
+    </style>
+</head>
+<body>
+
+    <div class="cursor" id="cursor"></div>
+    <div class="cursor-ring" id="cursorRing"></div>
+
+    <div class="intro-veil">
+        <div class="intro-title">明察秋豪，不见舆欣</div>
+        <div class="intro-notice">本网址为免费项目，出自小黑盒用户AginGriffin(抖音同名，其他平台无账号)，纯属娱乐无不良引导，若付费获得该网址请立即退款</div>
+    </div>
+
+    <div class="divider"></div>
+    <div class="center-text">择</div>
+
+    <div class="container">
+
+        <a href="jiaxin.html" class="half left-side">
+            <div class="particles" id="leftParticles"></div>
+
+            <div class="content-wrapper">
+                <div class="left-title">娜-咋啦？</div>
+                <button class="apple-btn-cool">欣之所向</button>
+                <div class="left-deco">
+                    <div class="deco-dot"></div>
+                    <div class="deco-dot"></div>
+                    <div class="deco-dot"></div>
+                </div>
+            </div>
+        </a>
+
+        <a href="jiahao.html" class="half right-side">
+            <div class="corner-deco tl"></div>
+            <div class="corner-deco br"></div>
+
+            <div class="content-wrapper">
+                <div class="right-title">UNLIMITED · POWER</div>
+                <button class="cyber-btn-extreme">
+                    <span class="glitch-text" data-text="豪情在天">豪情在天</span>
+                </button>
+                <div class="cyber-bar"></div>
+            </div>
+        </a>
+
+    </div>
+
+    <script>
+        /* ── 自定义光标 ── */
+        const cursor = document.getElementById('cursor');
+        const ring   = document.getElementById('cursorRing');
+        let mx = -100, my = -100, rx = -100, ry = -100;
+
+        document.addEventListener('mousemove', e => { mx = e.clientX; my = e.clientY; });
+        (function animateCursor() {
+            cursor.style.left = mx + 'px';
+            cursor.style.top  = my + 'px';
+            rx += (mx - rx) * 0.12;
+            ry += (my - ry) * 0.12;
+            ring.style.left = rx + 'px';
+            ring.style.top  = ry + 'px';
+            requestAnimationFrame(animateCursor);
+        })();
+
+        document.querySelectorAll('.half').forEach(el => {
+            el.addEventListener('mouseenter', () => {
+                cursor.style.width  = '24px';
+                cursor.style.height = '24px';
+                ring.style.width  = '60px';
+                ring.style.height = '60px';
+                ring.style.borderColor = el.classList.contains('left-side')
+                    ? 'rgba(255,180,210,0.8)' : 'rgba(0,240,255,0.8)';
+            });
+            el.addEventListener('mouseleave', () => {
+                cursor.style.width  = '16px';
+                cursor.style.height = '16px';
+                ring.style.width  = '44px';
+                ring.style.height = '44px';
+                ring.style.borderColor = 'rgba(255,255,255,0.5)';
+            });
+        });
+
+        /* ── 左侧粒子生成 ── */
+        const container = document.getElementById('leftParticles');
+        for (let i = 0; i < 28; i++) {
+            const p = document.createElement('div');
+            p.className = 'particle';
+            const sz = Math.random() * 5 + 2;
+            p.style.cssText = `
+                width:${sz}px; height:${sz}px;
+                left:${Math.random() * 100}%;
+                bottom:${Math.random() * -20}%;
+                animation-duration:${Math.random() * 8 + 6}s;
+                animation-delay:${Math.random() * 8}s;
+                opacity:${Math.random() * 0.6 + 0.2};
+            `;
+            container.appendChild(p);
+        }
+    </script>
+</body>
+</html>
