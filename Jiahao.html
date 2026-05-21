@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="zh-CN">
 <head>
@@ -93,29 +94,28 @@ function draw(){
     if(barHistory.length > maxSlots) barHistory.shift();
   }
 
-  // 动态基准线：高于均值→红柱向上，低于均值→绿柱向下
-  const avgVal = barHistory.length
-    ? barHistory.reduce((a, b) => a + b, 0) / barHistory.length
-    : 128;
-
+  // 与上一条柱线比较：频率升高→红柱向上，频率降低→绿柱向下
   const startX = canvas.width - barSlotW;
 
   for(let i = 0; i < barHistory.length; i++){
-    const val = barHistory[barHistory.length - 1 - i];
+    const idx = barHistory.length - 1 - i;
+    const val = barHistory[idx];
+    const prevVal = idx > 0 ? barHistory[idx - 1] : val; // 上一条的值
     const x = startX - i * barSlotW;
     if(x + barW < 0) break;
 
-    const diff = val - avgVal;
-    const barH = Math.abs(diff) / (avgVal || 1) * maxBarH * 0.8 + 4;
+    const diff = val - prevVal;
+    const base = prevVal || 1;
+    const barH = Math.abs(diff) / base * maxBarH * 2 + 4;
 
     if(diff >= 0){
-      // 高于均值 → 红柱向上
+      // 比上一条高 → 红柱向上
       ctx.fillStyle = '#ff3333';
       ctx.fillRect(x, centerY - barH, barW, barH);
       ctx.fillStyle = '#ff6666';
       ctx.fillRect(x + barW/2 - 1, centerY - barH - 5, 2, 5);
     } else {
-      // 低于均值 → 绿柱向下
+      // 比上一条低 → 绿柱向下
       ctx.fillStyle = '#00dd66';
       ctx.fillRect(x, centerY, barW, barH);
       ctx.fillStyle = '#66ffaa';
