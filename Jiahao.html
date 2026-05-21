@@ -93,31 +93,33 @@ function draw(){
     if(barHistory.length > maxSlots) barHistory.shift();
   }
 
-  // 与上一条柱线比较：频率升高→红柱向上，频率降低→绿柱向下
+  // 动态基准线：高于均值→红柱向上，低于均值→绿柱向下
+  const avgVal = barHistory.length
+    ? barHistory.reduce((a, b) => a + b, 0) / barHistory.length
+    : 128;
+
   const startX = canvas.width - barSlotW;
-  const maxBarHClamped = 80; // 限制最大高度，避免变化过大
 
   for(let i = 0; i < barHistory.length; i++){
-    const idx = barHistory.length - 1 - i;
-    const val = barHistory[idx];
-    const prevVal = idx > 0 ? barHistory[idx - 1] : val;
+    const val = barHistory[barHistory.length - 1 - i];
     const x = startX - i * barSlotW;
     if(x + barW < 0) break;
 
-    const diff = val - prevVal;
-    const base = prevVal || 1;
-    // 限制高度：最小4px，最大maxBarHClamped
-    const rawH = Math.abs(diff) / base * maxBarH;
-    const barH = Math.min(Math.max(rawH, 4), maxBarHClamped);
+    const diff = val - avgVal;
+    const barH = Math.abs(diff) / (avgVal || 1) * maxBarH * 0.8 + 4;
 
     if(diff >= 0){
-      // 比上一条高 → 纯红柱，只向上
+      // 高于均值 → 红柱向上
       ctx.fillStyle = '#ff3333';
       ctx.fillRect(x, centerY - barH, barW, barH);
+      ctx.fillStyle = '#ff6666';
+      ctx.fillRect(x + barW/2 - 1, centerY - barH - 5, 2, 5);
     } else {
-      // 比上一条低 → 纯绿柱，只向下
+      // 低于均值 → 绿柱向下
       ctx.fillStyle = '#00dd66';
       ctx.fillRect(x, centerY, barW, barH);
+      ctx.fillStyle = '#66ffaa';
+      ctx.fillRect(x + barW/2 - 1, centerY + barH, 2, 5);
     }
   }
 
@@ -143,4 +145,4 @@ window.addEventListener('resize', () => {
 });
 </script>
 </body>
-</html>
+</html> 
